@@ -424,7 +424,7 @@ NOADDL  ;"This report checks to see if over the course of the last
   USE IO  
   WRITE !
   WRITE "****************************************************************",!
-  WRITE "         RAD, MAM, D/C SUMMARIES, & XRAY/LAB RESULTS WITH NO ADDL SIGNERS",!
+  WRITE "         RAD, MAM, D/C SUMMARIES, XRAY/LAB RESULTS, & PHONE NOTES WITH NO ADDL SIGNERS",!
   WRITE "             DATE RANGE: ",$$EXTDATE(BDATE)," TO ",$$EXTDATE(EDATE),!
   WRITE "                  RUN DATE: ",$$TODAY^TMGDATE(1,1),!
   WRITE "",!
@@ -437,8 +437,8 @@ NOADDL  ;"This report checks to see if over the course of the last
   . NEW TIUIEN SET TIUIEN=0
   . FOR  SET TIUIEN=$O(^TIU(8925,"D",TIUDATE,TIUIEN)) QUIT:TIUIEN'>0  DO
   . . NEW DOCIEN SET DOCIEN=$P($G(^TIU(8925,TIUIEN,0)),"^",1)
-  . . ;"ONLY CHECK MAM REPORT, RAD REPORT, AND HOSPITAL D/C
-  . . IF (DOCIEN'=26)&(DOCIEN'=1428)&(DOCIEN'=1470)&(DOCIEN'=1471)&(DOCIEN'=81)&(DOCIEN'=1397) QUIT
+  . . ;"ONLY CHECK MAM REPORT, PHONE NOTE, RAD REPORT, AND HOSPITAL D/C
+  . . IF (DOCIEN'=26)&(DOCIEN'=1428)&(DOCIEN'=1470)&(DOCIEN'=1471)&(DOCIEN'=81)&(DOCIEN'=1397)&(DOCIEN'=1407) QUIT
   . . NEW AUTHOR SET AUTHOR=$P($G(^TIU(8925,TIUIEN,12)),"^",2)
   . . IF (((DOCIEN=81)&(AUTHOR'=83))&((DOCIEN=81)&(AUTHOR'=168))) QUIT
   . . ;"IS SABRINA AN ADD'L SIGNER?
@@ -446,6 +446,7 @@ NOADDL  ;"This report checks to see if over the course of the last
   . . NEW ADDLFOUND SET ADDLFOUND=0
   . . FOR  SET ADDLIEN=$O(^TIU(8925.7,"B",TIUIEN,ADDLIEN)) QUIT:ADDLIEN'>0  DO
   . . . IF $P($G(^TIU(8925.7,ADDLIEN,0)),"^",3)=259 SET ADDLFOUND=1
+  . . . IF DOCIEN=1407 SET ADDLFOUND=1
   . . IF ADDLFOUND=0 DO
   . . . NEW TMGDFN SET TMGDFN=$P($G(^TIU(8925,TIUIEN,0)),"^",2)
   . . . NEW NAME SET NAME=$P($G(^DPT(TMGDFN,0)),"^",1)
@@ -722,6 +723,7 @@ GETTASKS(DAY,TASKLIST)
   ;"
 EVYDAY(TASKLIST,IDX)  ;"THESE ARE THE EVERY DAY TASKS
   SET TASKLIST($I(IDX))="Pull labs (done before 8:15)"
+  SET TASKLIST($I(IDX))="Check LabCorp for new Lab Results"
   SET TASKLIST($I(IDX))="Pull controlled substances (done before 8:15)"
   SET TASKLIST($I(IDX))="Get hospital records"
   SET TASKLIST($I(IDX))="Check previous day's charges for coding errors"

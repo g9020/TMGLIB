@@ -27,7 +27,7 @@ LABORDERINI()  ;"Name of the lab order ini
   QUIT "LabOrder.ini"
   ;"
 LABORDERLOC()  ;"Path of the lab order folder
-  QUIT "/mnt/WinPublic/e.hagood"
+  QUIT "/mnt/WinPublic/AHK"
   ;"
 NETMESSLOC()  ;"Network folder path
   QUIT "/mnt/WinPublic/NetworkMessenger"

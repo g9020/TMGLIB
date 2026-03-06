@@ -71,17 +71,17 @@ GETPATFORMS(OUT,SESSIONID,ERR,FMDT,MODE)    ;"Get list of needed documents for p
 	SET MODE=+$GET(MODE)
 	NEW IDX SET IDX=-1
 	NEW ALLFORMS
-	;"                           1          2        3           4        5        6             7          8                9
-	;"Format: ALLFORMS(IDX)="DisplayName^viewName^storageNode^IconName^DueFnTag^DueFnRtn^NoteWriterTag^NoteWriterRtn^TargetNoteTitle"
+	;"                           1          2        3           4        5        6             7          8
+	;"Format: ALLFORMS(IDX)="DisplayName^viewName^storageNode^IconName^DueFnTag^DueFnRtn^NoteWriterTag^NoteWriterRtn"
 	;"----------------------------------------------------------------"
-	SET ALLFORMS($I(IDX))="Update Medical History^hxupdate^HX^ClipboardPlus^DUEHX^TMGPRE02^WTHX^TMGPRE02^NoteTitleHERE"
-	SET ALLFORMS($I(IDX))="Head-to-toe Questions^rosupdate^ROS^CoughingIcon^DUEROS^TMGPRE02^WTROS^TMGPRE02^NoteTitleHERE"
-	SET ALLFORMS($I(IDX))="Medication Review^medication_review^MEDS^ClipboardCapsule^DUERX^TMGPRE02^WTRX^TMGPRE02^NoteTitleHERE"
-	SET ALLFORMS($I(IDX))="Over-the-counter Suppliments, Vitamins, Meds^otc_medication_review^OTC-MEDS^HerbalBottle^DUEOTC^TMGPRE02^WTOTC^TMGPRE02^TITLE"
-	SET ALLFORMS($I(IDX))="Medication Allergies Review^medication_allergy_review^ALLERGY^RxAllergy^DUEALRGY^TMGPRE02^WTALRGY^TMGPRE02^TITLE"
-	SET ALLFORMS($I(IDX))="Consent to Treat^patient_consent_form^CSNT^TalkQuestionMark^DUECONSENT^TMGPRE02^WTCONSENT^TMGPRE02^TITLE"
-	SET ALLFORMS($I(IDX))="Mental Health Questionnaire^phq9Quest^PHQ9^Frown^DUEMH^TMGPRE02^WTMH^TMGPRE02^TITLE"
-	SET ALLFORMS($I(IDX))="Medicare Annual Wellness Visit (AWV) Questionnaire^awvQuest^AWV^HealthCurve^DUEAWV^TMGPRE02^WTAWV^TMGPRE02^TITLE"
+	SET ALLFORMS($I(IDX))="Update Medical History^hxupdate^HX^ClipboardPlus^DUEHX^TMGPRE02^WTHX^TMGPRE02"
+	SET ALLFORMS($I(IDX))="Head-to-toe Questions^rosupdate^ROS^CoughingIcon^DUEROS^TMGPRE02^WTROS^TMGPRE02"
+	SET ALLFORMS($I(IDX))="Medication Review^medication_review^MEDS^ClipboardCapsule^DUERX^TMGPRE02^WTRX^TMGPRE02"
+	SET ALLFORMS($I(IDX))="Over-the-counter Suppliments, Vitamins, Meds^otc_medication_review^OTC-MEDS^HerbalBottle^DUEOTC^TMGPRE02^WTOTC^TMGPRE02"
+	SET ALLFORMS($I(IDX))="Medication Allergies Review^medication_allergy_review^ALLERGY^RxAllergy^DUEALRGY^TMGPRE02^WTALRGY^TMGPRE02"
+	SET ALLFORMS($I(IDX))="Consent to Treat^patient_consent_form^CSNT^TalkQuestionMark^DUECONSENT^TMGPRE02^WTCONSENT^TMGPRE02"
+	SET ALLFORMS($I(IDX))="Mental Health Questionnaire^phq9Quest^PHQ9^Frown^DUEMH^TMGPRE02^WTMH^TMGPRE02"
+	SET ALLFORMS($I(IDX))="Medicare Annual Wellness Visit (AWV) Questionnaire^awvQuest^AWV^HealthCurve^DUEAWV^TMGPRE02^WTAWV^TMGPRE02"
 	;"SET ALLFORMS($I(IDX))="Patient Demographics^demographics_form^??"
 	;"SET ALLFORMS($I(IDX))="Insurance Information^insurance_form^??"
 	;"SET ALLFORMS($I(IDX))="Test signature^sig_form^SIG1^Certificate"
@@ -107,7 +107,6 @@ GETPATFORMS(OUT,SESSIONID,ERR,FMDT,MODE)    ;"Get list of needed documents for p
 	. SET OUT(JDX,"iconName")=$PIECE(ITEM,"^",4)  ;"Icon Name
 	. SET OUT(JDX,"writerFnTag")=$PIECE(ITEM,"^",7)  ;"WriterFn Tag
 	. SET OUT(JDX,"writerFnRoutine")=$PIECE(ITEM,"^",8)  ;"WriterFn Routine
-	. SET OUT(JDX,"targetNoteTitleName")=$PIECE(ITEM,"^",9)  ;"Target Title Name
 GDLDN ;
 	QUIT RESULT
 	;
@@ -335,8 +334,9 @@ GETALRGY(OUT,OUTPROGRESS,SESSIONID,ERR)  ;"Get data for patient ALLERGY form (ba
 	. MERGE OUT=^TMG("TMP","GETALRGY^TMGPRE01","OUT")  ;"so I can see what output was last time"
 	ELSE  DO
 	. SET ^TMG("TMP","GETALRGY^TMGPRE01","SESSIONID")=SESSIONID
-	NEW RESULT SET RESULT=$$GETCOMMON("ALLERGY",.OUT,.OUTPROGRESS,.SESSIONID,.ERR) ;"Get data for patient"
-	IF $DATA(OUT)>0 GOTO GAGYDN
+	NEW TMP,ARESULT SET RESULT=$$GETCOMMON("ALLERGY",.TMP,.OUTPROGRESS,.SESSIONID,.ERR) ;"Get data for patient"
+	MERGE OUT("answers")=TMP
+	IF $DATA(TMP)>0 GOTO GAGYDN
 	NEW TMGDFN SET TMGDFN=$$SESSION2DFN^TMGNODE1(SESSIONID,.ERR)
 	IF TMGDFN'>0 DO  GOTO GAGYDN
 	. SET RESULT="0^"_ERR
@@ -350,12 +350,12 @@ GETALRGY(OUT,OUTPROGRESS,SESSIONID,ERR)  ;"Get data for patient ALLERGY form (ba
 	NEW IDX SET IDX=0
 	FOR  SET IDX=$ORDER(ARR(IDX)) QUIT:IDX'>0  DO
 	. NEW LINE SET LINE=$GET(ARR(IDX)) QUIT:LINE=""
-	. IF LINE="No Known Allergies" SET OUT(JDX,"nkda")="%%bool%%true"
-	. ELSE  IF LINE="No Allergy Assessment" SET OUT(JDX,"never_assessed")="%%bool%%true"
+	. IF LINE="No Known Allergies" SET OUT("answers",JDX,"nkda")="%%bool%%true"
+	. ELSE  IF LINE="No Allergy Assessment" SET OUT("answers",JDX,"never_assessed")="%%bool%%true"
 	. ELSE  DO
-	. . SET OUT(JDX,"text")=$PIECE(LINE,"^",1)
-	. . SET OUT(JDX,"date")=$PIECE(LINE,"^",2)
-	. . SET OUT(JDX,"reaction")=$PIECE(LINE,"^",3)
+	. . SET OUT("answers",JDX,"text")=$PIECE(LINE,"^",1)
+	. . SET OUT("answers",JDX,"date")=$PIECE(LINE,"^",2)
+	. . SET OUT("answers",JDX,"reaction")=$PIECE(LINE,"^",3)
 	. SET JDX=JDX+1
 GAGYDN ;
 	KILL ^TMG("TMP","GETALRGY^TMGPRE01","OUT") MERGE ^TMG("TMP","GETALRGY^TMGPRE01","OUT")=OUT

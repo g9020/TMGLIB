@@ -44,7 +44,7 @@ IMPORT(PATH,FILE)
   NEW IDX SET IDX=1
   NEW INSARRAY
   NEW PLAN,PAID,CPT,VISIT
-  NEW YEAR SET YEAR=2025  ;"HARD CODING FOR NOW. CAN PROMPT USER IF NEED BE
+  NEW YEAR SET YEAR=2026  ;"HARD CODING FOR NOW. CAN PROMPT USER IF NEED BE
   NEW DATE SET DATE=$$TODAY^TMGDATE
   DO HFS2ARR^TMGIOUT3("/mnt/WinServer","SuspectMedConditions.csv","ARRAY",.OPTION)
   FOR  SET IDX=$O(ARRAY(IDX)) QUIT:IDX'>0  DO
@@ -108,7 +108,18 @@ IMPORT(PATH,FILE)
   . KILL TMGFDA,TMGIENS,TMGMSG
   QUIT
   ;"
-DAILYREPORT(SDT,DISPLAY) 
+DRTIMEFR  ;"Purpose: This will cycle through the schedule for a given time frame and print any reports needed.
+  NEW BDT,EDT,DISPLAY
+  NEW % WRITE "WOULD YOU LIKE TO EXPORT VEFAQRDS FOR ALL OF THESE PATIENTS" DO YN^DICN
+  SET DISPLAY=%
+  SET BDT=3260925,EDT=3261001
+  NEW ONEDT SET ONEDT=$$ADDDAYS^TMGDATE("-1",BDT)
+  FOR  SET ONEDT=$$ADDDAYS^TMGDATE("1",ONEDT) QUIT:ONEDT>EDT  DO
+  . WRITE ONEDT,!
+  . DO DAILYREPORT(ONEDT,DISPLAY,0)
+  QUIT
+  ;"
+DAILYREPORT(SDT,DISPLAY,PASTONES) 
    ;"This routine will take today's schedule and determine if any of the patients on it
    ;"   have open suspect medical conditions and then print the report
    SET DISPLAY=+$G(DISPLAY)
@@ -126,11 +137,19 @@ DR1
    SET HEADER=0
    NEW EDT
    SET SDT=$G(SDT)
-   NEW PASTONES SET PASTONES=1
+   NEW DTHEADER
+   NEW PASTONES SET PASTONES=+$G(PASTONES)
    IF SDT="" DO
    . SET SDT=$$TODAY^TMGDATE+0.00001
    . SET PASTONES=0
-   SET EDT=$$TODAY^TMGDATE+0.999999
+   . SET EDT=$$TODAY^TMGDATE+0.999999
+   . SET DTHEADER="TODAY"
+   ELSE  DO
+   . SET SDT=SDT+0.00001
+   . ;"SET EDT=$$TODAY^TMGDATE+0.999999
+   . SET EDT=SDT+0.99997
+   . SET DTHEADER="FOR "_$$EXTDATE^TMGDATE(SDT,1)
+   ;"
    ;"SET SDT="3250422.00001"
    ;"SET EDT="3250426.99999"
    NEW THISYEAR SET THISYEAR=$E(SDT,1,3)+1700
@@ -148,11 +167,17 @@ DR1
    . . IF $$UP^XLFSTR(PTINS)="HUMANA GOLD" DO
    . . . NEW TEMPLINE SET TEMPLINE=$P($G(^DPT(TMGDFN,0)),"^",1)_" (APPT TIME: "_$P($$EXTDATE^TMGDATE(DATE),"@",2)_" FOR: "_REASON_")"
    . . . SET OTHERARR(TEMPLINE)="HAS HUMANA GOLD. CHECK STELLAR HEALTH."
+   . . IF $$UP^XLFSTR(PTINS)="UHC-LIFE1" DO
+   . . . NEW TEMPLINE SET TEMPLINE=$P($G(^DPT(TMGDFN,0)),"^",1)_" (APPT TIME: "_$P($$EXTDATE^TMGDATE(DATE),"@",2)_" FOR: "_REASON_")"
+   . . . SET OTHERARR(TEMPLINE)="HAS UHC-LIFE1. CHECK DataCORE."
+   . . IF $$UP^XLFSTR(PTINS)["AARP/SEC" DO
+   . . . NEW TEMPLINE SET TEMPLINE=$P($G(^DPT(TMGDFN,0)),"^",1)_" (APPT TIME: "_$P($$EXTDATE^TMGDATE(DATE),"@",2)_" FOR: "_REASON_")"
+   . . . SET OTHERARR(TEMPLINE)="HAS AARP. CHECK DataCORE."
    . . IF ($D(ARRAY))!($D(EXARRAY)) DO
    . . . IF HEADER=0 DO
    . . . . WRITE !
    . . . . WRITE "****************************************************************",!
-   . . . . WRITE "          PATIENTS SCHEDULED TODAY WITH OPEN SUSPECT MEDICAL CONDITIONS",!
+   . . . . WRITE "          PATIENTS SCHEDULED ",DTHEADER," WITH OPEN SUSPECT MEDICAL CONDITIONS",!
    . . . . IF PASTONES=0 DO
    . . . . . WRITE "                            " WRITE $$TODAY^TMGDATE(1),!
    . . . . ELSE  DO
@@ -170,7 +195,10 @@ DR1
    . . . . . SET COUNT=COUNT+1
    . . . . . IF CONDS'="" SET CONDS=CONDS_","
    . . . . . SET CONDS=CONDS_$P($G(EXARRAY(IDX)),"^",2)
-   . . . . SET OTHERARR(LINE)="SATISFIED CODES: "_CONDS
+   . . . . IF $G(OTHERARR(LINE))'="" DO
+   . . . . . SET OTHERARR(LINE)=$G(OTHERARR(LINE))_$C(13,10)_"SATISFIED CODES: "_CONDS
+   . . . . ELSE  DO
+   . . . . . SET OTHERARR(LINE)="SATISFIED CODES: "_CONDS
    . . . ELSE  DO
    . . . . IF PASTONES=0 DO
    . . . . . WRITE $P($G(^DPT(TMGDFN,0)),"^",1)," (APPT TIME: ",$P($$EXTDATE^TMGDATE(DATE),"@",2)," FOR: "_REASON_")",!
@@ -225,6 +253,7 @@ MISSVITS(TMGDFN)
 PATSUSMC(TMGDFN)
    ;"This routine is designed to display a single patient's medical conditions for use
    ;"   in a TIU Template
+   ;"  1/19/26 - Changing from 3 columns to 2, removing the Conditions column
    NEW TMGRESULT SET TMGRESULT=""
    NEW PATIDX SET PATIDX=+$O(^TMG(22749,"B",TMGDFN,0))
    IF PATIDX'>0 GOTO PSMCDN
@@ -247,13 +276,14 @@ PATSUSMC(TMGDFN)
    . IF DESC="" SET DESC="*NOT PROVIDED*"
    . IF CONDITION SET CONDITION="*NOT PROVIDED*"
    . ;"SET TMGRESULT=TMGRESULT_"<b>ICD10:</b> "_ICD_" <b>DESC:</b> "_DESC_" <b>CONDITION:</b> "_CONDITION_"<br>"
-   . SET TMGRESULT=TMGRESULT_"<tr><td><b>ICD10:</b>"_ICD_"</td><td> <b>DESC:</b> "_DESC_"</td><td> <b>CONDITION:</b> "_CONDITION_"</td></tr>"
+   . SET TMGRESULT=TMGRESULT_"<tr><td>"_ICD_"</td><td>"_DESC_"</td></tr>"
+   . ;"1/19/26 changed to aboveSET TMGRESULT=TMGRESULT_"<tr><td><b>ICD10:</b>"_ICD_"</td><td> <b>DESC:</b> "_DESC_"</td><td> <b>CONDITION:</b> "_CONDITION_"</td></tr>"
    NEW FOOTMSG
    IF $$UP^XLFSTR(TMGRESULT)["DR. DEE" DO
    . SET FOOTMSG="No paper form. Dr. Dee has reviewed these."
    ELSE  DO  
    . SET FOOTMSG="Resolve this via paper form."
-   NEW FOOTER SET FOOTER="<tfoot align=""center""><tr><th colspan=""3""><b>"_FOOTMSG_"</b></th></tr></tfoot>"
+   NEW FOOTER SET FOOTER="<tfoot align=""center""><tr><th colspan=""2""><b>"_FOOTMSG_"</b></th></tr></tfoot>"
    ;"IF TMGRESULT'="" SET TMGRESULT="{HTML:<FONT style=""BACKGROUND-COLOR:#ff0000"">}"_TMGRESULT_FOOTER_"</table>{HTML:</FONT>}"
    IF TMGRESULT'="" SET TMGRESULT=$$TBLHEAD()_TMGRESULT_FOOTER_"</table>{HTML:</div>}" 
 PSMCDN
@@ -313,7 +343,6 @@ M1
    SET MENU(5)="View available reports"_$CHAR(9)_"Reports"
    SET USRPICK=$$MENU^TMGUSRI2(.MENU,"^")
    IF USRPICK="Upload" DO PICKIMPT
-   IF USRPICK="ViewOpen" DO DISPLAYMC(0)
    IF USRPICK="ViewAll" DO DISPLAYMC(1)
    IF USRPICK="ViewOne" DO DISPLAY1
    IF USRPICK="Reports" DO MCREPORTS
@@ -440,6 +469,11 @@ DRAUTO  ;"CALLED FROM OPTION
    DO DAILYREPORT("",0)
    QUIT
    ;"
+THURAUTO  ;"CALLED FROM OPTION, THIS IS DESIGNED TO RUN EVERY TUESDAY FOR THE FOLLOWING THURSDAY (+2 DAYS)
+   NEW DATE SET DATE=$$ADDDAYS^TMGDATE(2)
+   DO DAILYREPORT(DATE,0)
+   QUIT
+   ;"   
 CLEANUP
    NEW PATIDX SET PATIDX=0
    FOR  SET PATIDX=$O(^TMG(22749,PATIDX)) QUIT:PATIDX'>0  DO

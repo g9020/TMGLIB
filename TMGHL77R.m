@@ -145,7 +145,7 @@ OBR4    ;"Purpose: To transform the OBR segment, field 4  'UNIVERSAL SERVICE ID'
         . . ;"SET TMGRESULT="-1^"_TMGXERR
         SET TMGLASTOBR4=TMGVALUE  ;"this will be later killed in MSG2^TMGHL76R
         SET TMGLASTOBX3=""        ;"Rest since going into different order (OBR)
-        SET TMGVALUE=TMGHL7MSG(5,44)   ;"NEED TO GET THE PROPER SECTION HERE
+        SET TMGVALUE=$GET(TMGHL7MSG(TMGSEGN,44))   ;"OBR.44 = PROCEDURE CODE
         DO OBR4^TMGHL74R
 OBR4DN  QUIT
         ;
@@ -363,3 +363,15 @@ NOFILE(TMGENV,TMGHL7MSG)  ;"**DON'T** FILE THE MESSAGE
         ;"Results: 1^OK, 
         QUIT "1^OK"
         ;
+CHK4FILE()  ;"
+        ;"The SOFHA HL7 messages primarily aren't our patients (80%+)
+        ;"This will monitor the folder. If a file exists, then it will alert
+        ;"Eddie. He will then check the folder to analyze the message itself.
+        NEW EXT2 SET EXT2="*.HL7"
+        NEW SRCH 
+        SET SRCH(EXT2)="",SRCH($$UP^XLFSTR(EXT2))="",SRCH($$LOW^XLFSTR(EXT2))=""
+        NEW FILELIST,TMGRESULT SET TMGRESULT=$$LIST^%ZISH("/mnt/WinServer/SOFHA_HL7","SRCH","FILELIST")
+        IF TMGRESULT=0 QUIT
+        DO MAKEALERT^TMGSSQL1("CHECK V:\SOFHA_HL7 "_TMGRESULT_" FILE(S) EXIST.")
+        QUIT
+        ;"

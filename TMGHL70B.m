@@ -264,7 +264,8 @@ GM4  ;
   . IF TMGRESULT'>0 QUIT
   . SET OUT("LWL TEST")=IEN68D24
   ;
-GMDN  ; 
+GMDN  ;
+  IF $DATA(NLT) MERGE OUT("DEBUG",NLT)=TEMPOUT(NLT,"DEBUG")
   QUIT TMGRESULT        
   ; 
  ;"-------------------------------------------------------------------------        

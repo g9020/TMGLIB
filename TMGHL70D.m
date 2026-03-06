@@ -215,11 +215,19 @@ DELMAP(TMGENV,TMGTESTMSG,TMGHL7MSG)  ;"DELETE MAPPING
         WRITE "      found by ID, then the system falls back to lookup by name.",!
         WRITE "      Thus after removing TESTID map, the map might persist via TESTNAME",! 
         ;
-        NEW TMGUSERINPUT,TMGMNU,TMGMNUI
-DLM1    KILL TMGMNUI SET TMGMNUI=0
+        NEW TMGUSERINPUT,TMGMNU,TMGMNUI,SYNONYM,SYN60,IEN60
+        NEW PRECHECK,ATEST
+        NEW TMGLABPREFIX SET TMGLABPREFIX=$GET(TMGENV("PREFIX"))        
+DLM1    KILL PRECHECK
+        FOR ATEST=TESTID,TESTNAME DO
+        . SET SYNONYM=TMGLABPREFIX_"-"_ATEST
+        . SET SYN60=$EXTRACT(SYNONYM,1,30)
+        . SET IEN60=+$ORDER(^LAB(60,"B",SYN60,""))
+        . SET PRECHECK(TESTID)=$SELECT(IEN60'>0:" <-- (no map found in 'B' index",1:"")
+        KILL TMGMNUI SET TMGMNUI=0
         SET TMGMNU(TMGMNUI)="Pick Which Mapping To DELETE",TMGMNUI=TMGMNUI+1
-        SET TMGMNU(TMGMNUI)="TestID: "_TESTID_$CHAR(9)_"TestID",TMGMNUI=TMGMNUI+1
-        SET TMGMNU(TMGMNUI)="Test Name: "_TESTNAME_$CHAR(9)_"TestName",TMGMNUI=TMGMNUI+1
+        SET TMGMNU(TMGMNUI)="TestID: "_TESTID_$CHAR(9)_"TestID"_$GET(PRECHECK(TESTID)),TMGMNUI=TMGMNUI+1
+        SET TMGMNU(TMGMNUI)="Test Name: "_TESTNAME_$CHAR(9)_"TestName"_$GET(PRECHECK(TESTNAME)),TMGMNUI=TMGMNUI+1
         WRITE !
         SET TMGUSERINPUT=$$MENU^TMGUSRI2(.TMGMNU,"^")
         ;
@@ -230,14 +238,13 @@ DLM1    KILL TMGMNUI SET TMGMNUI=0
         GOTO DLM1
         ;                
 DLM2    IF "^"[TESTID GOTO DMDN
-        NEW TMGLABPREFIX SET TMGLABPREFIX=$GET(TMGENV("PREFIX"))
-        NEW SYNONYM SET SYNONYM=TMGLABPREFIX_"-"_TESTID
-        NEW SYN60 SET SYN60=$E(SYNONYM,1,30)  ;"//kt changed 30 -> 60
+        SET SYNONYM=TMGLABPREFIX_"-"_TESTID
+        NEW SYN60 SET SYN60=$E(SYNONYM,1,30) 
         NEW X,Y,IEN60,IEN61,IEN62,IEN64
         ;"First see IF already added.
         SET IEN60=+$ORDER(^LAB(60,"B",SYN60,""))  ;"//kt SYN30 -> SYN60
         IF IEN60'>0 DO  GOTO DMDN
-        . WRITE "Can't find an existing map for that test.",!
+        . WRITE "Can't find an existing map for that test because of bad test number (IEN60=",IEN60,").",!
         . DO PRESS2GO^TMGUSRI2
         SET Y=IEN60_"^"_$$GET1^DIQ(60,IEN60_",",.01)
         NEW VACODE SET VACODE=$$GET1^DIQ(60,IEN60_",","64.1:1")

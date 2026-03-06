@@ -222,11 +222,13 @@ GETMSG(TMGDFN,PROVIEN,TMGDT,REASON,DAYLEAD) ;"Create out-going message.
   ELSE  DO
   . SET MSG=$$GTMSGTXT("APPOINTMENT","|FNAME| has an appt with |PROVNAME| on |DATE|.")
   . IF (DAYLEAD>1) DO 
-  . . SET MSG=MSG_" "_$$GTMSGTXT("CONFIRM","Reply ""OK"" to confirm. Please don't forget to get labs drawn, if ordered for this appt.")
+  . . SET MSG=MSG_" "_$$GTMSGTXT("CONFIRM","Reply ""OK"" to confirm. We are temporarily without a lab in the office. If you need bloodwork for this appointment, please contact us for options.")
   . ELSE  IF (TMGDT[".0815") DO
   . . SET MSG=MSG_" "_$$GTMSGTXT("MEDS","Please bring ALL your medications with you.")
+  . . SET MSG=MSG_" "_$$GTMSGTXT("MASK","If you have illness symptoms (cough, fever, etc...) please wear a mask or notify staff.")
   . ELSE  DO
   . . SET MSG=MSG_" "_$$GTMSGTXT("ARRIVE_EARLY","Please arrive 10 minutes prior to your appointment to complete paperwork. Please bring ALL your medications with you.")
+  . . SET MSG=MSG_" "_$$GTMSGTXT("MASK","If you have illness symptoms (cough, fever, etc...) please wear a mask or notify staff.")
   SET MSG=MSG_" "_$$GTMSGTXT("QUESTIONS","QUESTIONS? Call Family Physicians of Greeneville (423-787-7000).")
   SET RESULT=$$SUBSTX(MSG,.ARR)
 GMDN  
@@ -526,13 +528,16 @@ SENDLAB1(DAYLEAD) ;"Send out SMS messages for upcoming appts, via HTTP method
   . NEW PHONE SET PHONE=""
   . FOR  SET PHONE=$ORDER(OUT("MSG",TMGDFN,PHONE)) QUIT:(PHONE="")  DO
   . . NEW MSG SET MSG=$GET(OUT("MSG",TMGDFN,PHONE)) QUIT:MSG=""
-  . . SET MSG="Good morning "_$$FNAME(TMGDFN)_". Dr. Toppenberg's office and our lab will be closed today due to current road conditions. We will reopen on Monday Jan 22,2024. Thank you and have a great day."
+  . . ;"SET MSG="Hi "_$$FNAME(TMGDFN)_". "
+  . . SET MSG="NOTICE: Beginning on March 3, 2026 Family Physicians of Greeneville will not have an in office lab. This is only temporary as we make other arrangements. Please visit https://www.familyphysiciansofgreeneville.com/labinfo or call us at 423-787-7000 for further details."
   . . IF LIVE=1 DO 
   . . . DO ADDLINE^TMGSMS01(.ARR,"csv:"_PHONE_"|"_MSG)
-  . . . ;"DO SMSSEND1^TMGKERN5(PHONE,MSG,TMGDFN) ;
+  . . . ;"                                           DO SMSSEND1^TMGKERN5(PHONE,MSG,TMGDFN) ;
   . . ELSE  WRITE PHONE," -- ",$LENGTH(MSG)," -- ",MSG,!
-  ;"NEW NONE MERGE NONE=OUT("NONE")
-  DO ADDLINE^TMGSMS01(.ARR,"csv:14234260236|"_"TEST2")
+  ;" SET MSG="NOTICE: Beginning on March 3, 2026 Family Physicians of Greeneville will not have an in office lab. This is only temporary as we make other arrangements. Please visit https://www.familyphysiciansofgreeneville.com/labinfo or call us at 423-787-7000 for further details."
+  ;" SET MSG="NOTICE: Beginning on March 3, 2026 Family Physicians of Greeneville will not have an in office lab. This is only temporary as we make other arrangements. Please visit https://www.familyphysiciansofgreeneville.com/labinfo or call us for further details."
+  ;" NEW NONE MERGE NONE=OUT("NONE")
+  ;" DO ADDLINE^TMGSMS01(.ARR,"csv:14234260236|"_MSG)
   ZWR ARR
   DO SMSSEND^TMGKERN5(.ARR,.STORE,1)
   QUIT
